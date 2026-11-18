@@ -18,12 +18,12 @@ prompt = """
 4. 購入前に知っておくべき2つのデメリット・注意点
 5. まとめ（どんな買い方をすべきか）
 
-※出力は本文のMarkdownのみにしてください（最初の「はい、書きました」などの挨拶は不要です）。
+※出力は本文のMarkdownのみにしてください（最初の公式な挨拶などは不要です）。
 ※一番最初の行に `# 記事タイトル` を入れてください。
 """
 
 response = client.models.generate_content(
-    model="gemini-3.8-flash",
+    model="gemini-1.5-flash",
     contents=prompt,
 )
 
