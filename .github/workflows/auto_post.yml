@@ -2,9 +2,8 @@ name: Auto Generate Blog Post
 
 on:
   schedule:
-    # 毎日日本時間の朝7時（UTC 22:00）に自動実行
     - cron: '0 22 * * *'
-  workflow_dispatch: # 手動でもテスト実行できるようにするボタン
+  workflow_dispatch:
 
 jobs:
   build-and-post:
@@ -19,7 +18,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install google-genai
+        run: pip install google-generativeai
 
       - name: Run script
         env:
