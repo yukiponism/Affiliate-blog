@@ -1,12 +1,14 @@
 import os
 import datetime
-from google import genai
+import google.generativeai as genai
 
-# 1. APIキーの読み込み
+# 1. APIキーの設定
 api_key = os.environ["GEMINI_API_KEY"]
-client = genai.Client(api_key=api_key)
+genai.configure(api_key=api_key)
 
-# 2. Geminiにトレンド商品選定＆メリット・デメリット記事を書かせる
+# 2. 安定している定番モデル（gemini-1.5-flash）を指定
+model = genai.GenerativeModel("gemini-1.5-flash")
+
 prompt = """
 あなたはプロのガジェット・生活便利グッズのレビュアーです。
 現在（2026年）日本のECサイト（楽天市場やAmazon）でトレンドになっている、または口コミ評価が高い具体的な人気商品・ジャンルを1つ選び、購入を検討している読者向けのレビュー記事をMarkdown形式で書いてください。
@@ -22,11 +24,7 @@ prompt = """
 ※一番最初の行に `# 記事タイトル` を入れてください。
 """
 
-response = client.models.generate_content(
-    model="gemini-3.8-flash",
-    contents=prompt,
-)
-
+response = model.generate_content(prompt)
 article_text = response.text.strip()
 
 # タイトルの抽出（1行目の # を取り除く）
