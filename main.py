@@ -1,14 +1,13 @@
 import os
+import time
 import datetime
-import google.generativeai as genai
+from google import genai
 
-# 1. APIキーの設定
+# 1. APIキーの読み込み
 api_key = os.environ["GEMINI_API_KEY"]
-genai.configure(api_key=api_key)
+client = genai.Client(api_key=api_key)
 
-# 2. 安定している定番モデル（gemini-1.5-flash）を指定
-model = genai.GenerativeModel("gemini-1.5-flash")
-
+# 2. プロンプト設定
 prompt = """
 あなたはプロのガジェット・生活便利グッズのレビュアーです。
 現在（2026年）日本のECサイト（楽天市場やAmazon）でトレンドになっている、または口コミ評価が高い具体的な人気商品・ジャンルを1つ選び、購入を検討している読者向けのレビュー記事をMarkdown形式で書いてください。
@@ -24,15 +23,31 @@ prompt = """
 ※一番最初の行に `# 記事タイトル` を入れてください。
 """
 
-response = model.generate_content(prompt)
-article_text = response.text.strip()
+# 3. サーバー混雑（503エラー）対策の自動リトライ付きで生成
+article_text = ""
+for attempt in range(1, 6):
+    try:
+        print(f"記事生成を試行中... ({attempt}回目)")
+        response = client.models.generate_content(
+            model="gemini-3.8-flash",
+            contents=prompt,
+        )
+        article_text = response.text.strip()
+        break
+    except Exception as e:
+        print(f"エラー発生: {e}")
+        if attempt < 5:
+            print("サーバー混雑のため10秒待機して再試行します...")
+            time.sleep(10)
+        else:
+            raise e
 
 # タイトルの抽出（1行目の # を取り除く）
 lines = article_text.split("\n")
 title = lines[0].replace("#", "").strip()
 body = "\n".join(lines[1:]).strip()
 
-# 3. GitHub Pages（Jekyll）用の記事ファイルとして保存
+# 4. GitHub Pages（Jekyll）用の記事ファイルとして保存
 today = datetime.date.today().strftime("%Y-%m-%d")
 os.makedirs("_posts", exist_ok=True)
 filename = f"_posts/{today}-review.md"
