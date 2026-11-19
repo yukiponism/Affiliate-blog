@@ -3,23 +3,28 @@ import os
 from google import genai
 
 def main():
-    # 1. Geminiクライアントの初期化（GitHub SecretsのGEMINI_API_KEYを使用）
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
         raise ValueError("GEMINI_API_KEY environment variable is not set.")
     
     client = genai.Client(api_key=api_key)
 
-    # 2. Geminiに生成させる記事のプロンプト（指示）
+    # 1行目にタイトル、2行目以降に読みやすく装飾した本文を出させるプロンプト
     prompt = """
-    今話題の便利なトレンド商品やガジェットを1つ選び、そのレビュー記事をMarkdown形式で書いてください。
-    以下の構成を必ず含めてください：
-    - 魅力的で具体的な商品名
-    - この商品の概要・特徴
-    - メリット（長所）3選
-    - デメリット（短所）2選
-    - どんな人におすすめか・まとめ
-    ※挨拶や前置きは書かず、記事本文のMarkdownから出力してください。
+    今話題の便利なトレンド商品やガジェットを1つ選び、読者が読みたくなるレビュー記事を書いてください。
+
+    【出力ルール】
+    - 1行目には、記事のタイトルのみを書いてください（具体的な商品名と魅力が伝わるキャッチーなタイトルにする。記号や「タイトル：」などの前置き、# は付けない）。
+    - 2行目は空行にし、3行目以降にMarkdown形式で本文を書いてください。
+    - 挨拶や前置きは一切書かないでください。
+
+    【本文の構成と装飾ルール】
+    文字ばかりにならないよう、以下の要素を必ず使って見やすく構成してください：
+    1. 導入文（読者の悩みに寄り添う親しみやすい語り口で2〜3行）
+    2. ## 商品の基本スペック・特徴（Markdownの「表（テーブル）」を使って、価格目安・おすすめ度・特徴などを整理する）
+    3. ## ここが最高！メリット3選（✅ を使い、箇条書き＋太字で分かりやすく）
+    4. ## 購入前に知っておきたい注意点（⚠️ を使い、デメリットを正直に2つ）
+    5. ## こんな人におすすめ！（引用「>」を使って、どんなシーンで役立つかイメージしやすくまとめる）
     """
 
     print("Geminiに記事の生成を依頼中...")
@@ -28,30 +33,37 @@ def main():
         contents=prompt,
     )
     
-    article_content = response.text
+    raw_text = response.text.strip()
+    lines = raw_text.splitlines()
 
-    # 3. _postsフォルダがなければ作成する
+    # 1行目をタイトルとして取得（ダブルクォーテーションが含まれるとYAMLが崩れるため置換）
+    article_title = lines[0].replace("#", "").replace('"', "”").strip()
+    if not article_title:
+        article_title = "話題のトレンド商品徹底レビュー"
+
+    # 2行目以降を本文として結合
+    article_body = "\n".join(lines[1:]).strip()
+
+    # _postsフォルダ作成
     os.makedirs("_posts", exist_ok=True)
 
-    # 4. 上書きを防ぐため、ファイル名に「年月日・時分秒」を含める
-    # 例: _posts/2026-11-19-15-30-00-review.md
+    # 上書き防止のため、ファイル名に「年月日・時分秒」を含める
     now = datetime.datetime.now()
     filename = f"_posts/{now.strftime('%Y-%m-%d-%H-%M-%S')}-review.md"
 
-    # 5. Jekyll用のFront Matter（メタデータ）を確実に付与してファイルに保存
-    # Jekyllは記事の先頭に --- で囲まれた layout や date がないと一覧に表示しないため付与します
+    # Jekyll用のFront Matter（抽出した商品名入りタイトルをセット）
     front_matter = f"""---
 layout: post
-title: "トレンド商品AIレビュー ({now.strftime('%Y/%m/%d %H:%M')})"
+title: "{article_title}"
 date: {now.strftime('%Y-%m-%d %H:%M:%S')}
 ---
 
 """
 
     with open(filename, "w", encoding="utf-8") as f:
-        f.write(front_matter + article_content)
+        f.write(front_matter + article_body)
 
-    print(f"記事の生成と保存に成功しました: {filename}")
+    print(f"記事の生成と保存に成功しました: {filename} (タイトル: {article_title})")
 
 if __name__ == "__main__":
     main()
