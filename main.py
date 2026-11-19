@@ -8,21 +8,25 @@ MODEL_NAME = "gemini-3.8-flash"
 # 収益化（成約）しやすく、ニッチ検索を狙いやすい4つのテーマプール
 TARGET_GENRES = [
     {
+        "category": "植物",
         "name": "観葉植物・水耕栽培の環境づくり＆消耗品",
         "focus": "植物育成LEDライト（パネル型・クリップ型）、室内用液体肥料・活力剤、水耕栽培キット・スポンジ培地、小型静音サーキュレーター、害虫対策など、2,000円〜6,000円前後で買い足しやすい実用アイテム",
         "keywords": "植物育成ライト クリップ 電気代 / 水耕栽培 液体肥料 室内 / 観葉植物 サーキュレーター 静音",
     },
     {
+        "category": "ゲーム",
         "name": "ゲームソフト＆コントローラー・収納周辺機器",
         "focus": "背面ボタン・連射機能付きサードパーティ製コントローラー、カセット収納付き持ち運びケース、大容量microSDカード、充電ドック周辺機器、複数人で遊べる定番・隠れ名作ソフトなど、2,000円〜7,000円前後で手が伸びやすいアイテム",
         "keywords": "Switch コントローラー 背面ボタン コスパ / ゲームソフト 2人プレイ おすすめ / Switch ケース カセット収納",
     },
     {
+        "category": "スマホ",
         "name": "スマホ快適化・充電＆MagSafe周辺ガジェット",
         "focus": "Qi2対応折りたたみマグネット充電スタンド、アンチグレア・覗き見防止ガラスフィルム、巻き取り式100W対応USB-Cケーブル、MagSafe対応カードケース・スマホリングなど、1,500円〜5,000円前後で日常の不満を解決するアイテム",
         "keywords": "Qi2 充電器 折りたたみ 旅行 / 巻き取り式 ケーブル 100W 持ち運び / スマホ フィルム アンチグレア 比較",
     },
     {
+        "category": "スマートグラス",
         "name": "AIスマートグラス・ウェアラブル活用＆接続アクセサリー",
         "focus": "スマートグラスや映像出力メガネをスマホ・ゲーム機と繋ぐ変換アダプター、専用遮光カバー・インサートレンズ周辺、または寝ながら動画・翻訳用途で注目される手頃なエントリー〜ミドルモデルなど、検索ライバルが少ないニッチ商材",
         "keywords": "スマートグラス Switch 接続 アダプター / スマートグラス 寝ながら 動画 / AIスマートグラス 口コミ 比較",
@@ -42,9 +46,7 @@ def fetch_rakuten_product_data() -> dict | None:
     return None
 
 
-def build_prompt(product_data: dict | None) -> str:
-    selected_genre = random.choice(TARGET_GENRES)
-
+def build_prompt(selected_genre: dict, product_data: dict | None) -> str:
     if product_data:
         return f"""
         以下の実在商品データをもとに、売れ行きや口コミ実績、同等レベルの競合商品との比較を重視したレビュー記事を書いてください。
@@ -102,10 +104,11 @@ def main() -> None:
         raise ValueError("GEMINI_API_KEY environment variable is not set.")
 
     client = genai.Client(api_key=api_key)
+    selected_genre = random.choice(TARGET_GENRES)
     product_data = fetch_rakuten_product_data()
-    prompt = build_prompt(product_data)
+    prompt = build_prompt(selected_genre, product_data)
 
-    print("Geminiに記事の生成を依頼中...")
+    print(f"Geminiに記事の生成を依頼中... (カテゴリ: {selected_genre['category']})")
     response = client.models.generate_content(
         model=MODEL_NAME,
         contents=prompt,
@@ -123,11 +126,13 @@ def main() -> None:
     os.makedirs("_posts", exist_ok=True)
     now = datetime.datetime.now()
     filename = f"_posts/{now.strftime('%Y-%m-%d-%H-%M-%S')}-review.md"
+    category = selected_genre["category"]
 
     front_matter = f"""---
 layout: post
 title: "{article_title}"
 date: {now.strftime('%Y-%m-%d %H:%M:%S')}
+categories: [{category}]
 ---
 
 """
@@ -135,7 +140,7 @@ date: {now.strftime('%Y-%m-%d %H:%M:%S')}
     with open(filename, "w", encoding="utf-8") as f:
         f.write(front_matter + article_body + "\n")
 
-    print(f"記事の生成と保存に成功しました: {filename} (タイトル: {article_title})")
+    print(f"記事の生成と保存に成功しました: {filename} (カテゴリ: {category}, タイトル: {article_title})")
 
 
 if __name__ == "__main__":
