@@ -29,28 +29,35 @@ def rewrite_post(client: genai.Client, filepath: str) -> None:
     with open(filepath, "r", encoding="utf-8") as f:
         original_content = f.read()
 
+    # 元のFront Matterから日付（date）とカテゴリ（categories）があれば引き継ぐ
     date_match = re.search(r"^date:\s*(.+)$", original_content, flags=re.MULTILINE)
     existing_date = date_match.group(1).strip() if date_match else ""
 
+    cat_match = re.search(r"^categories:\s*(.+)$", original_content, flags=re.MULTILINE)
+    existing_categories = cat_match.group(1).strip() if cat_match else ""
+
+    # --- 以降（Front Matterの終わり）を元記事として抽出
     parts = original_content.split("---", 2)
     source_text = parts[2].strip() if len(parts) == 3 else original_content.strip()
 
     prompt = f"""
     以下は過去に作成したレビュー記事の下書き・本文です。
-    扱っている商品やテーマの方向性は活かしつつ、読者が読みやすく魅力的な記事にリライトしてください。
+    扱っている商品やテーマの方向性は活かしつつ、海外の読者にも読みやすい「和英併記（日本語＋英語）」のレビュー記事にリライトしてください。
 
     【出力ルール】
-    - 1行目には、記事のタイトルのみを書いてください（具体的な商品名と魅力が伝わるキャッチーなタイトルにする。記号や「タイトル：」などの前置き、# は付けない）。
+    - 1行目には、記事のタイトルのみを書いてください。「日本語タイトル | English Title」のように和英併記にしてください（記号や「タイトル：」などの前置き、#、ダブルクォーテーションは付けない）。
     - 2行目は空行にし、3行目以降にMarkdown形式で本文を書いてください。
     - 挨拶や前置きは一切書かないでください。
+    - 本文の各セクション・表・箇条書き・引用は、まず自然な日本語を書き、そのすぐ下（または同じ項目内）に自然な英語を併記してください。
 
     【本文の構成と装飾ルール】
-    文字ばかりにならないよう、以下の要素を必ず使って見やすく構成してください：
-    1. 導入文（読者の悩みに寄り添う親しみやすい語り口で2〜3行）
-    2. ## 商品の基本スペック・特徴（Markdownの「表（テーブル）」を使って、価格目安・おすすめ度・特徴などを整理する）
-    3. ## ここが最高！メリット3選（✅ を使い、箇条書き＋太字で分かりやすく）
-    4. ## 購入前に知っておきたい注意点（⚠️ を使い、デメリットを正直に2つ）
-    5. ## こんな人におすすめ！（引用「>」を使って、どんなシーンで役立つかイメージしやすくまとめる）
+    文字ばかりにならないよう、以下の要素を必ず使って見やすく構成してください（すべて和英併記）：
+    1. 導入文（具体的な悩みやシーンに寄り添い、人気・口コミで選ばれている理由に触れつつ簡潔に）
+    2. ## 売れ行き・口コミで支持される理由 / Why It’s Popular & Well-Reviewed（売れ行きと口コミ傾向、評価されるポイントを整理）
+    3. ## 同等レベルの競合商品との比較 / Comparison with Similar Products（Markdownの「表」を使って、「今回の商品」「同等クラス競合A」「同等クラス競合B」を比較し、表の下に選び方の違いを解説）
+    4. ## ここが刺さる！メリット3選 / 3 Key Benefits in Real Use（`✅` を使い、「どんな場面でどう助かるか」を具体的に箇条書き＋太字）
+    5. ## デメリットと「向かない人」 / Drawbacks & Who It’s Not For（`⚠️` を使い、正直な弱点2つと「こういう人にはおすすめしない」を明確に書く）
+    6. ## こんな人におすすめ！ / Recommended For（引用「>」を使って、刺さる読者像をわかりやすくまとめる）
 
     【元記事】
     {source_text}
@@ -61,14 +68,15 @@ def rewrite_post(client: genai.Client, filepath: str) -> None:
 
     article_title = lines[0].replace("#", "").replace('"', "”").strip() if lines else ""
     if not article_title:
-        article_title = "話題のトレンド商品徹底レビュー"
+        article_title = "人気・口コミで注目の厳選アイテム徹底レビュー | Curated Product Review"
 
     article_body = "\n".join(lines[1:]).strip()
 
     date_line = f"\ndate: {existing_date}" if existing_date else ""
+    cat_line = f"\ncategories: {existing_categories}" if existing_categories else ""
     front_matter = f"""---
 layout: post
-title: "{article_title}"{date_line}
+title: "{article_title}"{date_line}{cat_line}
 ---
 
 """
@@ -76,7 +84,7 @@ title: "{article_title}"{date_line}
     with open(filepath, "w", encoding="utf-8") as f:
         f.write(front_matter + article_body + "\n")
 
-    print(f"更新完了: {filepath} -> {article_title}")
+    print(f"和英併記更新完了: {filepath} -> {article_title}")
 
 
 def main() -> None:
