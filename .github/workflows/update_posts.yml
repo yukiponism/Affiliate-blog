@@ -35,5 +35,6 @@ jobs:
             echo "変更はありませんでした。"
           else
             git commit -m "Update existing posts with improved formatting and titles"
+            git pull --rebase origin main
             git push
           fi
