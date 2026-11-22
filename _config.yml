@@ -1,3 +1,15 @@
-title: "AI自動レビューブログ"
-description: "最新トレンド商品のメリット・デメリットをお届け"
+title: "人気・口コミで選ぶおすすめアイテム徹底レビュー | Curated Gear & Gadget Reviews"
+description: "観葉植物・水耕栽培グッズ、カメラ周辺機器、ゲーム関連アイテム、スマホガジェット、スマートグラスなど、人気と口コミで支持される実用アイテムを和英併記でわかりやすくレビュー。"
+lang: ja
+url: "https://yukiponism.github.io"
+baseurl: "/Affiliate-blog"
+
 theme: minima
+
+plugins:
+  - jekyll-sitemap
+  - jekyll-seo-tag
+  - jekyll-feed
+
+header_pages:
+  - categories.md
